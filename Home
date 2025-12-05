@@ -1,0 +1,253 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Cookie, User, Shield, Sparkles, Lock } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '@/utils';
+
+export default function Home() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  useEffect(() => {
+    const savedPlayer = localStorage.getItem('cookiePlayer');
+    if (savedPlayer) {
+      window.location.href = createPageUrl('Game');
+    }
+  }, []);
+  
+  const handleLogin = async () => {
+    if (!username.trim()) {
+      setError('Please enter a username');
+      return;
+    }
+    
+    if (!password.trim()) {
+      setError('Please enter a password');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    // Check for admin login
+    if (adminMode) {
+      if (username === 'Owner' && adminPassword === '12345') {
+        const existingPlayers = await base44.entities.Player.filter({ username: 'Owner' });
+        let player;
+        
+        if (existingPlayers.length > 0) {
+                      player = existingPlayers[0];
+                      await base44.entities.Player.update(player.id, { is_admin: true, role: 'owner' });
+                      player.is_admin = true;
+                      player.role = 'owner';
+                    } else {
+                      player = await base44.entities.Player.create({
+                        username: 'Owner',
+                        password: adminPassword,
+                        cookies: 0,
+                        cookies_per_click: 1,
+                        cookies_per_second: 0,
+                        is_admin: true,
+                        role: 'owner',
+                        upgrades: {}
+                      });
+                    }
+        
+        localStorage.setItem('cookiePlayer', JSON.stringify(player));
+        window.location.href = createPageUrl('Game');
+        return;
+      } else {
+        setError('Invalid admin credentials');
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Regular user login/signup
+    const existingPlayers = await base44.entities.Player.filter({ username: username.trim() });
+    let player;
+    
+    if (existingPlayers.length > 0) {
+      // Login - verify password
+      player = existingPlayers[0];
+      if (player.password !== password) {
+        setError('Incorrect password');
+        setLoading(false);
+        return;
+      }
+      if (isSignup) {
+        setError('Username already exists. Please login instead.');
+        setLoading(false);
+        return;
+      }
+    } else {
+      // Signup - create new account
+      if (!isSignup) {
+        setError('Account not found. Please sign up first.');
+        setLoading(false);
+        return;
+      }
+      if (password.length < 4) {
+        setError('Password must be at least 4 characters');
+        setLoading(false);
+        return;
+      }
+      player = await base44.entities.Player.create({
+        username: username.trim(),
+        password: password,
+        cookies: 0,
+        cookies_per_click: 1,
+        cookies_per_second: 0,
+        is_admin: false,
+        upgrades: {}
+      });
+    }
+    
+    localStorage.setItem('cookiePlayer', JSON.stringify(player));
+    window.location.href = createPageUrl('Game');
+  };
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-950 via-amber-900 to-yellow-900 flex items-center justify-center p-4">
+      {/* Floating cookies background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute text-4xl opacity-20"
+            initial={{
+              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+              y: (typeof window !== 'undefined' ? window.innerHeight : 800) + 50
+            }}
+            animate={{
+              y: -100,
+              rotate: 360
+            }}
+            transition={{
+              duration: 8 + Math.random() * 4,
+              repeat: Infinity,
+              delay: Math.random() * 5,
+              ease: "linear"
+            }}
+          >
+            🍪
+          </motion.div>
+        ))}
+      </div>
+      
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", duration: 0.5 }}
+      >
+        <Card className="w-full max-w-md bg-gradient-to-br from-amber-900/90 to-amber-950/90 border-amber-600/50 backdrop-blur-sm shadow-2xl">
+          <CardHeader className="text-center space-y-4">
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="mx-auto"
+            >
+              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-lg">
+                <Cookie className="w-14 h-14 text-amber-200" />
+              </div>
+            </motion.div>
+            <CardTitle className="text-3xl font-bold text-amber-200">
+              Cookie Clicker
+            </CardTitle>
+            <p className="text-amber-400/80">{isSignup ? 'Create an account to start clicking!' : 'Login to continue your journey!'}</p>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="relative">
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500" />
+                                    <Input
+                                      placeholder="Enter username"
+                                      value={username}
+                                      onChange={(e) => setUsername(e.target.value)}
+                                      className="pl-10 bg-amber-950/50 border-amber-700/50 text-white placeholder:text-amber-600/50 h-12"
+                                    />
+                                  </div>
+
+                                  <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500" />
+                                    <Input
+                                      type="password"
+                                      placeholder="Enter password"
+                                      value={password}
+                                      onChange={(e) => setPassword(e.target.value)}
+                                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                                      className="pl-10 bg-amber-950/50 border-amber-700/50 text-white placeholder:text-amber-600/50 h-12"
+                                    />
+                                  </div>
+              
+              {adminMode && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  className="relative"
+                >
+                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-500" />
+                  <Input
+                    type="password"
+                    placeholder="Admin password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    className="pl-10 bg-purple-950/50 border-purple-700/50 text-white placeholder:text-purple-600/50 h-12"
+                  />
+                </motion.div>
+              )}
+              
+              {error && (
+                <p className="text-red-400 text-sm text-center">{error}</p>
+              )}
+              
+              <Button
+                onClick={handleLogin}
+                disabled={loading}
+                className="w-full h-12 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-amber-950 font-bold text-lg shadow-lg"
+              >
+                {loading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Cookie className="w-6 h-6" />
+                  </motion.div>
+                ) : (
+                  <>
+                                          <Sparkles className="w-5 h-5 mr-2" />
+                                          {isSignup ? 'Sign Up' : 'Login'}
+                                        </>
+                )}
+              </Button>
+            </div>
+            
+            <button
+                                onClick={() => setIsSignup(!isSignup)}
+                                className="w-full text-center text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                              >
+                                {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                              </button>
+
+                              <button
+                                onClick={() => setAdminMode(!adminMode)}
+                                className="w-full text-center text-sm text-amber-600/60 hover:text-amber-500 transition-colors"
+                              >
+                                {adminMode ? 'Back to player login' : 'Admin login'}
+                              </button>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
