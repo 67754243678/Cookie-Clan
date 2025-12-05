@@ -1,0 +1,43 @@
+{
+  "name": "GlobalBoost",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Boost name"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "click_multiplier",
+        "cps_multiplier",
+        "bonus_cookies"
+      ],
+      "description": "Type of boost"
+    },
+    "multiplier": {
+      "type": "number",
+      "default": 2,
+      "description": "Boost multiplier value"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the boost expires"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "message": {
+      "type": "string",
+      "description": "Custom message to display"
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "multiplier",
+    "expires_at"
+  ]
+}

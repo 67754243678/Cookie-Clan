@@ -1,0 +1,149 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { base44 } from '@/api/base44Client';
+import { Shield, Zap, Gift, Trash2, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+
+export default function AdminPanel({ boosts, onBoostCreated, onBoostDeleted }) {
+  const [boostName, setBoostName] = useState('');
+  const [boostType, setBoostType] = useState('click_multiplier');
+  const [multiplier, setMultiplier] = useState(2);
+  const [duration, setDuration] = useState(60);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const createBoost = async () => {
+    if (!boostName) {
+      toast.error('Please enter a boost name');
+      return;
+    }
+    
+    setLoading(true);
+    const expiresAt = new Date(Date.now() + duration * 60 * 1000).toISOString();
+    
+    await base44.entities.GlobalBoost.create({
+      name: boostName,
+      type: boostType,
+      multiplier: parseFloat(multiplier),
+      expires_at: expiresAt,
+      is_active: true,
+      message: message
+    });
+    
+    toast.success('Global boost activated!');
+    setBoostName('');
+    setMessage('');
+    setLoading(false);
+    onBoostCreated();
+  };
+  
+  const deleteBoost = async (boostId) => {
+    await base44.entities.GlobalBoost.delete(boostId);
+    toast.success('Boost removed');
+    onBoostDeleted();
+  };
+  
+  return (
+    <Card className="bg-gradient-to-br from-purple-950/80 to-indigo-900/60 border-purple-500/50">
+      <CardHeader>
+        <CardTitle className="text-purple-300 flex items-center gap-2">
+          <Shield className="w-5 h-5" /> Admin Panel
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <h4 className="text-white font-medium flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-400" /> Create Global Boost
+          </h4>
+          
+          <Input
+            placeholder="Boost Name (e.g., Double Cookie Day!)"
+            value={boostName}
+            onChange={(e) => setBoostName(e.target.value)}
+            className="bg-gray-800 border-gray-700"
+          />
+          
+          <Select value={boostType} onValueChange={setBoostType}>
+            <SelectTrigger className="bg-gray-800 border-gray-700">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="click_multiplier">Click Multiplier</SelectItem>
+              <SelectItem value="cps_multiplier">CPS Multiplier</SelectItem>
+              <SelectItem value="bonus_cookies">Bonus Cookies Per Click</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-gray-400 text-sm">Multiplier/Bonus</label>
+              <Input
+                type="number"
+                value={multiplier}
+                onChange={(e) => setMultiplier(e.target.value)}
+                className="bg-gray-800 border-gray-700"
+                min="1"
+              />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm">Duration (minutes)</label>
+              <Input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="bg-gray-800 border-gray-700"
+                min="1"
+              />
+            </div>
+          </div>
+          
+          <Textarea
+            placeholder="Custom message (optional)"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="bg-gray-800 border-gray-700"
+            rows={2}
+          />
+          
+          <Button 
+            onClick={createBoost} 
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
+            <Gift className="w-4 h-4 mr-2" /> Activate Global Boost
+          </Button>
+        </div>
+        
+        <div className="space-y-3">
+          <h4 className="text-white font-medium flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-400" /> Active Boosts
+          </h4>
+          {boosts.filter(b => b.is_active).length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-4">No active boosts</p>
+          ) : (
+            boosts.filter(b => b.is_active).map((boost) => (
+              <div key={boost.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                <div>
+                  <span className="text-white font-medium">{boost.name}</span>
+                  <span className="text-gray-400 text-sm ml-2">({boost.type})</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteBoost(boost.id)}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

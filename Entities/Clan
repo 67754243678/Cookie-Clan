@@ -1,0 +1,51 @@
+{
+  "name": "Clan",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Clan name"
+    },
+    "tag": {
+      "type": "string",
+      "description": "Short clan tag (3-5 chars)"
+    },
+    "description": {
+      "type": "string"
+    },
+    "leader_username": {
+      "type": "string"
+    },
+    "member_count": {
+      "type": "number",
+      "default": 1
+    },
+    "total_cookies": {
+      "type": "number",
+      "default": 0
+    },
+    "color": {
+      "type": "string",
+      "default": "#8B4513"
+    },
+    "rank": {
+      "type": "string",
+      "enum": [
+        "rookie",
+        "pro",
+        "more_pro",
+        "legend"
+      ],
+      "default": "rookie"
+    },
+    "weekly_cookies": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "tag",
+    "leader_username"
+  ]
+}

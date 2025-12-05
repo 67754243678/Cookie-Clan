@@ -1,0 +1,47 @@
+import React from 'react';
+import { Cookie, MousePointer, Zap, Users } from 'lucide-react';
+
+export default function StatsDisplay({ cookies, cps, cpc, clan }) {
+  const formatNumber = (num) => {
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return Math.floor(num).toLocaleString();
+  };
+  
+  return (
+    <div className="text-center space-y-4">
+      <div className="space-y-1">
+        <p className="text-6xl md:text-7xl font-bold text-amber-300 drop-shadow-lg">
+          {formatNumber(cookies)}
+        </p>
+        <p className="text-amber-100 text-xl flex items-center justify-center gap-2">
+          <Cookie className="w-6 h-6" /> cookies
+        </p>
+      </div>
+      
+      <div className="flex justify-center gap-6 text-sm">
+        <div className="flex items-center gap-2 bg-amber-900/30 px-4 py-2 rounded-full">
+          <MousePointer className="w-4 h-4 text-amber-400" />
+          <span className="text-amber-200">{formatNumber(cpc)}/click</span>
+        </div>
+        <div className="flex items-center gap-2 bg-amber-900/30 px-4 py-2 rounded-full">
+          <Zap className="w-4 h-4 text-yellow-400" />
+          <span className="text-amber-200">{formatNumber(cps)}/sec</span>
+        </div>
+      </div>
+      
+      {clan && (
+        <div 
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+          style={{ backgroundColor: clan.color + '40', borderColor: clan.color, borderWidth: 2 }}
+        >
+          <Users className="w-4 h-4" style={{ color: clan.color }} />
+          <span className="font-bold" style={{ color: clan.color }}>[{clan.tag}]</span>
+          <span className="text-white">{clan.name}</span>
+        </div>
+      )}
+    </div>
+  );
+}

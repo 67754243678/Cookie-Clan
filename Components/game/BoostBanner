@@ -1,0 +1,109 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Clock, Zap } from 'lucide-react';
+
+export default function BoostBanner({ boosts }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const activeBoosts = boosts.filter(b => b.is_active && new Date(b.expires_at) > new Date());
+  
+  useEffect(() => {
+    if (activeBoosts.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % activeBoosts.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeBoosts.length]);
+  
+  if (activeBoosts.length === 0) return null;
+  
+  const safeIndex = currentIndex >= activeBoosts.length ? 0 : currentIndex;
+  const boost = activeBoosts[safeIndex];
+  
+  if (!boost) return null;
+  
+  const getTimeRemaining = (expiresAt) => {
+    const diff = new Date(expiresAt) - new Date();
+    if (diff <= 0) return 'Expired';
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
+  
+  const getBoostIcon = (type) => {
+    switch (type) {
+      case 'click_multiplier': return '🖱️';
+      case 'cps_multiplier': return '⚡';
+      case 'bonus_cookies': return '🍪';
+      default: return '✨';
+    }
+  };
+  
+  const getBoostDescription = (boost) => {
+    switch (boost.type) {
+      case 'click_multiplier': return `${boost.multiplier}x Click Power!`;
+      case 'cps_multiplier': return `${boost.multiplier}x Cookies/Second!`;
+      case 'bonus_cookies': return `+${boost.multiplier} Bonus Cookies!`;
+      default: return boost.name;
+    }
+  };
+  
+  return (
+    <motion.div
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="fixed top-0 left-0 right-0 z-50"
+    >
+      <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 p-1">
+        <div className="bg-gradient-to-r from-purple-900/90 via-pink-900/90 to-orange-900/90 backdrop-blur-sm">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={boost.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center justify-center gap-3 py-3 px-4"
+            >
+              <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+              <span className="text-2xl">{getBoostIcon(boost.type)}</span>
+              <div className="flex flex-col md:flex-row md:items-center md:gap-3">
+                <span className="text-white font-bold text-sm md:text-base">
+                  {boost.name}: {getBoostDescription(boost)}
+                </span>
+                {boost.message && (
+                  <span className="text-yellow-200 text-xs md:text-sm italic">
+                    "{boost.message}"
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 bg-black/30 px-3 py-1 rounded-full">
+                <Clock className="w-4 h-4 text-yellow-300" />
+                <span className="text-yellow-300 font-mono text-sm">
+                  {getTimeRemaining(boost.expires_at)}
+                </span>
+              </div>
+              <Zap className="w-5 h-5 text-yellow-300 animate-pulse" />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+      {activeBoosts.length > 1 && (
+        <div className="flex justify-center gap-1 py-1 bg-black/50">
+          {activeBoosts.map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                i === currentIndex ? 'bg-yellow-400' : 'bg-white/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}

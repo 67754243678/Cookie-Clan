@@ -1,0 +1,88 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { MousePointer, Zap, Factory, Rocket, Star, Crown } from 'lucide-react';
+
+const UPGRADES = [
+  { id: 'cursor', name: 'Extra Cursor', icon: MousePointer, baseCost: 15, cpcBonus: 1, cpsBonus: 0 },
+  { id: 'grandma', name: 'Grandma', icon: Star, baseCost: 100, cpcBonus: 0, cpsBonus: 1 },
+  { id: 'farm', name: 'Cookie Farm', icon: Zap, baseCost: 500, cpcBonus: 0, cpsBonus: 5 },
+  { id: 'factory', name: 'Factory', icon: Factory, baseCost: 2000, cpcBonus: 5, cpsBonus: 10 },
+  { id: 'rocket', name: 'Cookie Rocket', icon: Rocket, baseCost: 10000, cpcBonus: 20, cpsBonus: 50 },
+  { id: 'empire', name: 'Cookie Empire', icon: Crown, baseCost: 50000, cpcBonus: 100, cpsBonus: 200 },
+];
+
+export default function UpgradeShop({ cookies, upgrades, onPurchase }) {
+  const getUpgradeCount = (id) => upgrades?.[id] || 0;
+  
+  const getUpgradeCost = (upgrade) => {
+    const count = getUpgradeCount(upgrade.id);
+    return Math.floor(upgrade.baseCost * Math.pow(1.15, count));
+  };
+  
+  const formatNumber = (num) => {
+    if (num >= 1e12) return (num / 1e12).toFixed(1) + 'T';
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+    return Math.floor(num).toString();
+  };
+  
+  return (
+    <div className="space-y-3">
+      <h3 className="text-amber-300 font-bold text-lg flex items-center gap-2">
+        <Zap className="w-5 h-5" /> Upgrades
+      </h3>
+      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+        {UPGRADES.map((upgrade) => {
+          const cost = getUpgradeCost(upgrade);
+          const canAfford = cookies >= cost;
+          const count = getUpgradeCount(upgrade.id);
+          
+          return (
+            <motion.div
+              key={upgrade.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card className={`p-3 ${canAfford ? 'bg-amber-900/50 border-amber-600/50 cursor-pointer' : 'bg-gray-900/50 border-gray-700/50 opacity-60'}`}>
+                <button
+                  onClick={() => canAfford && onPurchase(upgrade, cost)}
+                  disabled={!canAfford}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${canAfford ? 'bg-amber-700' : 'bg-gray-700'}`}>
+                      <upgrade.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-medium">{upgrade.name}</span>
+                        <span className="text-amber-400 text-xs bg-amber-900/50 px-2 py-1 rounded">
+                          x{count}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {upgrade.cpcBonus > 0 && `+${upgrade.cpcBonus} per click`}
+                        {upgrade.cpcBonus > 0 && upgrade.cpsBonus > 0 && ' • '}
+                        {upgrade.cpsBonus > 0 && `+${upgrade.cpsBonus}/sec`}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
+                        🍪 {formatNumber(cost)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export { UPGRADES };

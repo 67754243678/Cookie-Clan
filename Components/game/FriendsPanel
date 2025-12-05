@@ -1,0 +1,263 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Users, UserPlus, Gift, Search, Check, X, Star, Crown, Eye } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+export default function FriendsPanel({ player, cookies, onCookiesChange }) {
+  const [searchUsername, setSearchUsername] = useState('');
+  const [searchResult, setSearchResult] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState(null);
+  const [giftAmount, setGiftAmount] = useState('');
+  const [giftingTo, setGiftingTo] = useState(null);
+  const queryClient = useQueryClient();
+
+  const { data: friendRequests = [], refetch: refetchRequests } = useQuery({
+    queryKey: ['friendRequests', player.username],
+    queryFn: async () => {
+      const sent = await base44.entities.FriendRequest.filter({ from_username: player.username });
+      const received = await base44.entities.FriendRequest.filter({ to_username: player.username });
+      return { sent, received };
+    }
+  });
+
+  const { data: allPlayers = [] } = useQuery({
+    queryKey: ['allPlayers'],
+    queryFn: () => base44.entities.Player.list()
+  });
+
+  const getFriends = () => {
+    const acceptedSent = friendRequests.sent?.filter(r => r.status === 'accepted').map(r => r.to_username) || [];
+    const acceptedReceived = friendRequests.received?.filter(r => r.status === 'accepted').map(r => r.from_username) || [];
+    return [...new Set([...acceptedSent, ...acceptedReceived])];
+  };
+
+  const friends = getFriends();
+  const pendingReceived = friendRequests.received?.filter(r => r.status === 'pending') || [];
+
+  const handleSearch = async () => {
+    if (!searchUsername.trim()) return;
+    setSearching(true);
+    const results = await base44.entities.Player.filter({ username: searchUsername.trim() });
+    setSearchResult(results[0] || null);
+    setSearching(false);
+  };
+
+  const handleSendRequest = async (username) => {
+    await base44.entities.FriendRequest.create({
+      from_username: player.username,
+      to_username: username,
+      status: 'pending'
+    });
+    refetchRequests();
+    setSearchResult(null);
+    setSearchUsername('');
+  };
+
+  const handleAcceptRequest = async (request) => {
+    await base44.entities.FriendRequest.update(request.id, { status: 'accepted' });
+    refetchRequests();
+  };
+
+  const handleRejectRequest = async (request) => {
+    await base44.entities.FriendRequest.update(request.id, { status: 'rejected' });
+    refetchRequests();
+  };
+
+  const handleGiftCookies = async () => {
+    const amount = parseInt(giftAmount);
+    if (!amount || amount <= 0 || amount > cookies) return;
+    
+    const recipient = allPlayers.find(p => p.username === giftingTo);
+    if (!recipient) return;
+
+    await base44.entities.Player.update(recipient.id, { 
+      cookies: (recipient.cookies || 0) + amount 
+    });
+    onCookiesChange(-amount);
+    setGiftingTo(null);
+    setGiftAmount('');
+  };
+
+  const formatNumber = (num) => {
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+    return Math.floor(num || 0).toLocaleString();
+  };
+
+  const isFriend = (username) => friends.includes(username);
+  const hasPendingRequest = (username) => {
+    return friendRequests.sent?.some(r => r.to_username === username && r.status === 'pending');
+  };
+
+  return (
+    <Card className="bg-gradient-to-br from-amber-950/80 to-amber-900/60 border-amber-700/50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-amber-300 flex items-center gap-2">
+          <Users className="w-5 h-5" /> Friends
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 max-h-[500px] overflow-y-auto">
+        {/* Search */}
+        <div className="flex gap-2">
+          <Input
+            placeholder="Search username..."
+            value={searchUsername}
+            onChange={(e) => setSearchUsername(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="bg-amber-900/50 border-amber-700 text-white"
+          />
+          <Button onClick={handleSearch} disabled={searching} className="bg-amber-600 hover:bg-amber-700">
+            <Search className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Search Result */}
+        {searchResult && searchResult.username !== player.username && (
+          <div className="bg-amber-900/30 p-3 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-amber-700 flex items-center justify-center">
+                {searchResult.avatar_url || searchResult.username[0]}
+              </div>
+              <span className="text-white">{searchResult.username}</span>
+              {searchResult.is_vip && <Star className="w-4 h-4 text-yellow-400" />}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setViewingProfile(searchResult)}>
+                <Eye className="w-4 h-4" />
+              </Button>
+              {!isFriend(searchResult.username) && !hasPendingRequest(searchResult.username) && (
+                <Button size="sm" onClick={() => handleSendRequest(searchResult.username)} className="bg-green-600">
+                  <UserPlus className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pending Requests */}
+        {pendingReceived.length > 0 && (
+          <div>
+            <p className="text-amber-400 text-sm mb-2">Friend Requests ({pendingReceived.length})</p>
+            {pendingReceived.map((request) => (
+              <div key={request.id} className="bg-purple-900/30 p-2 rounded-lg flex items-center justify-between mb-2">
+                <span className="text-white">{request.from_username}</span>
+                <div className="flex gap-1">
+                  <Button size="sm" onClick={() => handleAcceptRequest(request)} className="bg-green-600 h-7 w-7 p-0">
+                    <Check className="w-4 h-4" />
+                  </Button>
+                  <Button size="sm" onClick={() => handleRejectRequest(request)} className="bg-red-600 h-7 w-7 p-0">
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Friends List */}
+        <div>
+          <p className="text-amber-400 text-sm mb-2">My Friends ({friends.length})</p>
+          {friends.length === 0 ? (
+            <p className="text-gray-500 text-sm">No friends yet. Search for players!</p>
+          ) : (
+            friends.map((friendUsername) => {
+              const friendData = allPlayers.find(p => p.username === friendUsername);
+              return (
+                <div key={friendUsername} className="bg-amber-900/30 p-2 rounded-lg flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-700 flex items-center justify-center text-sm">
+                      {friendData?.avatar_url || friendUsername[0]}
+                    </div>
+                    <span className="text-white">{friendUsername}</span>
+                    {friendData?.is_vip && <Star className="w-4 h-4 text-yellow-400" />}
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setViewingProfile(friendData)} className="h-7 w-7 p-0">
+                      <Eye className="w-4 h-4 text-amber-400" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setGiftingTo(friendUsername)} className="h-7 w-7 p-0">
+                      <Gift className="w-4 h-4 text-pink-400" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </CardContent>
+
+      {/* View Profile Dialog */}
+      <Dialog open={!!viewingProfile} onOpenChange={() => setViewingProfile(null)}>
+        <DialogContent className="bg-amber-950 border-amber-700">
+          <DialogHeader>
+            <DialogTitle className="text-amber-300">Player Profile</DialogTitle>
+          </DialogHeader>
+          {viewingProfile && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-amber-700 flex items-center justify-center text-3xl">
+                  {viewingProfile.avatar_url || viewingProfile.username[0]}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-white">{viewingProfile.username}</span>
+                    {viewingProfile.is_vip && <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />}
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <Badge className="bg-gray-600 text-xs">{viewingProfile.role || 'player'}</Badge>
+                    <Badge className="bg-amber-700 text-xs">{viewingProfile.membership || 'free'}</Badge>
+                  </div>
+                </div>
+              </div>
+              {viewingProfile.bio && (
+                <p className="text-amber-200/80 text-sm italic">"{viewingProfile.bio}"</p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-amber-900/50 p-3 rounded-lg text-center">
+                  <p className="text-amber-400 text-xs">Cookies</p>
+                  <p className="text-white font-bold">{formatNumber(viewingProfile.cookies)}</p>
+                </div>
+                <div className="bg-amber-900/50 p-3 rounded-lg text-center">
+                  <p className="text-amber-400 text-xs">Per Second</p>
+                  <p className="text-white font-bold">{formatNumber(viewingProfile.cookies_per_second)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Gift Dialog */}
+      <Dialog open={!!giftingTo} onOpenChange={() => setGiftingTo(null)}>
+        <DialogContent className="bg-amber-950 border-amber-700">
+          <DialogHeader>
+            <DialogTitle className="text-amber-300">Gift Cookies to {giftingTo}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-amber-400 text-sm">Your cookies: {formatNumber(cookies)}</p>
+            <Input
+              type="number"
+              placeholder="Amount to gift"
+              value={giftAmount}
+              onChange={(e) => setGiftAmount(e.target.value)}
+              className="bg-amber-900/50 border-amber-700 text-white"
+            />
+            <Button 
+              onClick={handleGiftCookies}
+              disabled={!giftAmount || parseInt(giftAmount) <= 0 || parseInt(giftAmount) > cookies}
+              className="w-full bg-pink-600 hover:bg-pink-700"
+            >
+              <Gift className="w-4 h-4 mr-2" /> Send Gift
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}

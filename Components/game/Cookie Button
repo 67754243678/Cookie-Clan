@@ -1,0 +1,36 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+
+export default function CookieButton({ onClick, cookiesPerClick }) {
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <motion.button
+        onClick={onClick}
+        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.05 }}
+        className="relative w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 shadow-2xl cursor-pointer select-none"
+        style={{
+          boxShadow: '0 20px 60px rgba(139, 69, 19, 0.5), inset 0 -10px 30px rgba(0,0,0,0.3), inset 0 10px 30px rgba(255,255,255,0.1)'
+        }}
+      >
+        {/* Cookie texture dots */}
+        <div className="absolute inset-8 flex flex-wrap justify-center items-center gap-4">
+          {[...Array(7)].map((_, i) => (
+            <div
+              key={i}
+              className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-amber-950 opacity-60"
+              style={{
+                transform: `translate(${Math.sin(i * 0.9) * 20}px, ${Math.cos(i * 0.9) * 20}px)`
+              }}
+            />
+          ))}
+        </div>
+        
+        {/* Shine effect */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white to-transparent opacity-10" />
+      </motion.button>
+      
+      <p className="text-amber-200 text-lg font-medium">+{cookiesPerClick} per click</p>
+    </div>
+  );
+}

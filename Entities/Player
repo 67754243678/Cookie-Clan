@@ -1,0 +1,97 @@
+{
+  "name": "Player",
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "description": "Player's display name"
+    },
+    "password": {
+      "type": "string",
+      "description": "Player's password"
+    },
+    "cookies": {
+      "type": "number",
+      "default": 0,
+      "description": "Total cookies earned"
+    },
+    "cookies_per_click": {
+      "type": "number",
+      "default": 1
+    },
+    "cookies_per_second": {
+      "type": "number",
+      "default": 0
+    },
+    "clan_id": {
+      "type": "string",
+      "description": "ID of the clan player belongs to"
+    },
+    "upgrades": {
+      "type": "object",
+      "description": "Purchased upgrades"
+    },
+    "total_clicks": {
+      "type": "number",
+      "default": 0
+    },
+    "is_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_vip": {
+      "type": "boolean",
+      "default": false
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "player",
+        "moderator",
+        "admin",
+        "owner"
+      ],
+      "default": "player"
+    },
+    "membership": {
+      "type": "string",
+      "enum": [
+        "free",
+        "bronze",
+        "silver",
+        "gold",
+        "diamond"
+      ],
+      "default": "free"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "URL to player's avatar image"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Player's bio/description"
+    },
+    "achievements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Array of earned achievement IDs"
+    },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Array of earned badge IDs"
+    }
+  },
+  "required": [
+    "username",
+    "password"
+  ],
+  "rls": {}
+}
